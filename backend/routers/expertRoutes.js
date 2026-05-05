@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { diagnose } = require('../controllers/expertController');
+const { diagnose } = require('../controllers/expertcontroller');
 
 // Endpoint untuk mendapatkan daftar gejala (tampilan di React)
 router.get('/gejala', async (req, res) => {
