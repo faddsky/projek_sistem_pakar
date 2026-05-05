@@ -1,0 +1,10 @@
+@import "tailwindcss";
+
+/* Font Quicksand biar tetap imut & profesional */
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;600;700&display=swap');
+
+body {
+  font-family: 'Quicksand', sans-serif;
+  background-color: #FFF0F3; /* bg-soft-pink */
+  color: #374151; /* text-gray-700 */
+}
