@@ -1,6 +1,6 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Inisialisasi Gemini API menggunakan API Key dari .env
+// Inisialisasi tetap ada di luar, tapi tidak akan terpanggil di dalam fungsi
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const diagnose = async (req, res) => {
@@ -8,17 +8,14 @@ const diagnose = async (req, res) => {
         const { selectedSymptoms } = req.body; 
         const db = req.app.locals.db;
 
-        // Validasi input
         if (!selectedSymptoms || selectedSymptoms.length === 0) {
             return res.status(400).json({ message: "Pilih minimal satu gejala untuk memulai diagnosa." });
         }
 
-        // 1. Ambil semua basis pengetahuan dari database
         const [rules] = await db.query("SELECT * FROM basis_pengetahuan");
         
         let hasilDiagnosaRaw = [];
 
-        // 2. Iterasi setiap Rule untuk menghitung CF awal
         rules.forEach(rule => {
             const stringAturan = rule.aturan_if_then;
             const gejalaDiRule = stringAturan.match(/G\d{2}/g) || []; 
@@ -53,10 +50,10 @@ const diagnose = async (req, res) => {
             }
         });
 
-        // 3. Gabungkan CF (CF Combine)
         const finalCalculated = hasilDiagnosaRaw.reduce((acc, curr) => {
             const existing = acc.find(item => item.penyakit.toLowerCase() === curr.penyakit.toLowerCase());
             if (existing) {
+                // Rumus CF Combine
                 existing.cf = existing.cf + curr.cf * (1 - existing.cf);
             } else {
                 acc.push(curr);
@@ -74,11 +71,13 @@ const diagnose = async (req, res) => {
             });
         }
 
-        // 4. Integrasi Gemini API (Prompt diperingkas)
-        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+        // --- INTEGRASI GEMINI DIMATIKAN SEMENTARA ---
+        let aiAdvice = "Fitur saran AI sedang dinonaktifkan untuk pengujian sistem.";
         
+        /* 
+        // Bagian ini dikomentari agar tidak memakan kuota
         try {
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Gunakan 1.5-flash yang kuotanya lebih banyak
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
             const prompt = `Singkat saja: Berikan 1 kalimat definisi penyakit ${diagnosaUtama.penyakit} 
                             dan list 5 poin penanganan rumah tanpa penjelasan panjang. 
                             Gunakan bahasa Indonesia yang santai.`;
@@ -86,18 +85,18 @@ const diagnose = async (req, res) => {
             const result = await model.generateContent(prompt);
             aiAdvice = result.response.text().replace(/[*#]/g, '').trim();
         } catch (aiError) {
-            // Jika kuota habis (Error 429), kita beri pesan default saja
             console.error("AI Quota Error:", aiError.message);
-            aiAdvice = "Saran penanganan AI sedang mencapai batas limit (Quota Exceeded). Silakan coba lagi nanti atau segera hubungi dokter.";
+            aiAdvice = "Saran penanganan AI sedang tidak tersedia.";
         }
+        */
+        // --------------------------------------------
 
-        // 5. Kirim respon akhir ke Frontend React (STRUKTUR DIPERBAIKI)
         res.json({
             status: "success",
             diagnosa: {
                 penyakit: diagnosaUtama.penyakit.toUpperCase(),
                 keyakinan: (diagnosaUtama.cf * 100).toFixed(2) + "%",
-                penjelasan_ai: aiAdvice // Nama field disesuaikan dengan React (penjelasan_ai)
+                penjelasan_ai: aiAdvice 
             },
             detail_lain: finalCalculated.slice(1, 4).map(h => ({
                 penyakit: h.penyakit.toUpperCase(),
