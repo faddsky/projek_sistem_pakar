@@ -1,8 +1,3 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-// Inisialisasi tetap ada di luar, tapi tidak akan terpanggil di dalam fungsi
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
 const diagnose = async (req, res) => {
     try {
         const { selectedSymptoms } = req.body; 
@@ -12,6 +7,7 @@ const diagnose = async (req, res) => {
             return res.status(400).json({ message: "Pilih minimal satu gejala untuk memulai diagnosa." });
         }
 
+        // Ambil semua aturan dari database
         const [rules] = await db.query("SELECT * FROM basis_pengetahuan");
         
         let hasilDiagnosaRaw = [];
@@ -50,10 +46,10 @@ const diagnose = async (req, res) => {
             }
         });
 
+        // Proses CF Combine untuk penyakit yang sama dari rule berbeda
         const finalCalculated = hasilDiagnosaRaw.reduce((acc, curr) => {
             const existing = acc.find(item => item.penyakit.toLowerCase() === curr.penyakit.toLowerCase());
             if (existing) {
-                // Rumus CF Combine
                 existing.cf = existing.cf + curr.cf * (1 - existing.cf);
             } else {
                 acc.push(curr);
@@ -71,32 +67,35 @@ const diagnose = async (req, res) => {
             });
         }
 
-        // --- INTEGRASI GEMINI DIMATIKAN SEMENTARA ---
-        let aiAdvice = "Fitur saran AI sedang dinonaktifkan untuk pengujian sistem.";
+        // --- AMBIL DATA DARI TABEL informasi_penyakit ---
+        let penjelasanPenyakit = "Penjelasan detail belum tersedia.";
+        let saranPertolongan = "Segera hubungi tenaga medis untuk penanganan lebih lanjut.";
         
-        /* 
-        // Bagian ini dikomentari agar tidak memakan kuota
         try {
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            const prompt = `Singkat saja: Berikan 1 kalimat definisi penyakit ${diagnosaUtama.penyakit} 
-                            dan list 5 poin penanganan rumah tanpa penjelasan panjang. 
-                            Gunakan bahasa Indonesia yang santai.`;
+            const [dataInfo] = await db.query(
+                `SELECT ip.penjelasan, ip.pertolongan_pertama 
+                 FROM informasi_penyakit ip 
+                 JOIN penyakit p ON ip.kode_penyakit = p.kode_penyakit 
+                 WHERE p.nama_penyakit = ?`, 
+                [diagnosaUtama.penyakit]
+            );
 
-            const result = await model.generateContent(prompt);
-            aiAdvice = result.response.text().replace(/[*#]/g, '').trim();
-        } catch (aiError) {
-            console.error("AI Quota Error:", aiError.message);
-            aiAdvice = "Saran penanganan AI sedang tidak tersedia.";
+            if (dataInfo.length > 0) {
+                penjelasanPenyakit = dataInfo[0].penjelasan;
+                saranPertolongan = dataInfo[0].pertolongan_pertama;
+            }
+        } catch (dbError) {
+            console.error("Gagal query informasi_penyakit:", dbError.message);
         }
-        */
-        // --------------------------------------------
 
         res.json({
             status: "success",
             diagnosa: {
                 penyakit: diagnosaUtama.penyakit.toUpperCase(),
                 keyakinan: (diagnosaUtama.cf * 100).toFixed(2) + "%",
-                penjelasan_ai: aiAdvice 
+                // PISAHKAN DATA DI SINI:
+                penjelasan: penjelasanPenyakit, 
+                pertolongan: saranPertolongan   
             },
             detail_lain: finalCalculated.slice(1, 4).map(h => ({
                 penyakit: h.penyakit.toUpperCase(),
