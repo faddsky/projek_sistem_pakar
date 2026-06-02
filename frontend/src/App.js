@@ -7,6 +7,7 @@ const App = () => {
   const [userChoices, setUserChoices] = useState({});
   const [hasil, setHasil] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showCalculation, setShowCalculation] = useState(false);
 
   useEffect(() => {
     const fetchGejala = async () => {
@@ -39,17 +40,16 @@ const App = () => {
 
     setLoading(true);
     setHasil(null);
+    setShowCalculation(false);
     try {
       const response = await axios.post('http://localhost:5000/api/diagnose', {
         selectedSymptoms: formattedSymptoms
       });
       
-      if (response.data.status === "success") {
-        setHasil(response.data);
-        setTimeout(() => {
-          window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-        }, 300);
-      }
+      setHasil(response.data);
+      setTimeout(() => {
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+      }, 300);
     } catch (err) {
       console.error("Error Diagnosa:", err);
     } finally {
@@ -65,7 +65,7 @@ const App = () => {
           <div className="md:w-1/2 bg-gradient-to-br from-[#FB6F92] to-[#FFB3C1] p-12 flex flex-col justify-center text-white relative">
             <h2 className="text-4xl font-black mb-4 leading-tight text-center md:text-left">Halo, Selamat Datang! ✨</h2>
             <p className="text-pink-50 font-medium leading-relaxed opacity-90 text-sm text-center md:text-left">
-              Sistem Pakar Meal-Safe membantu kamu menganalisis kemungkinan keracunan makanan berdasarkan Certainty Factor secara cepat dan aesthetic.
+              Sistem Pakar DigestCare membantu Anda menganalisis kemungkinan penyakit pencernaan (Gastritis, Diare, GERD, Wasir, Tipes, Apendisitis) berdasarkan Certainty Factor secara cepat, akurat, dan aesthetic.
             </p>
           </div>
           <div className="md:w-1/2 p-12 flex flex-col justify-center text-center md:text-left">
@@ -82,7 +82,7 @@ const App = () => {
               onClick={() => setShowLanding(false)}
               className="bg-[#FB6F92] hover:bg-[#ff5d87] text-white font-black py-4 px-8 rounded-2xl shadow-lg transition-all transform hover:-translate-y-1 active:scale-95"
             >
-              Mulai Diagnosa Sekarang 🌸
+              Mulai Diagnosa Sekarang 🔍
             </button>
           </div>
         </div>
@@ -102,8 +102,8 @@ const App = () => {
         </button>
 
         <header className="bg-white rounded-[3rem] p-10 shadow-sm border-b-8 border-pink-200 text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-black text-[#FB6F92] mb-3">Meal-Safe</h1>
-          <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.3em]">Certainty Factor Expert System</p>
+          <h1 className="text-4xl md:text-5xl font-black text-[#FB6F92] mb-3">DigestCare</h1>
+          <p className="text-gray-400 font-bold uppercase text-[10px] tracking-[0.3em]">Sistem Pakar Deteksi Penyakit Pencernaan</p>
         </header>
 
         <div className="bg-white rounded-[3rem] shadow-xl p-8 md:p-12 border border-pink-50 mb-8">
@@ -142,7 +142,19 @@ const App = () => {
           </button>
         </div>
 
-        {hasil && hasil.diagnosa && (
+        {hasil && hasil.status === "empty" && (
+          <div className="max-w-4xl mx-auto animate-diagnosa">
+            <div className="bg-red-50 border border-red-200 rounded-[2rem] p-8 text-center shadow-lg">
+              <span className="text-4xl">⚠️</span>
+              <h3 className="text-xl font-black text-red-800 mt-4 mb-2">Maaf, Tidak Dapat Memprediksi</h3>
+              <p className="text-sm font-semibold text-red-600 leading-relaxed max-w-lg mx-auto">
+                Maaf, belum bisa memprediksi penyakit Anda dikarenakan gejala yang diinput kurang atau tidak cocok dengan basis pengetahuan kami. Mohon masukkan gejala tambahan yang Anda rasakan.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {hasil && hasil.status === "success" && hasil.diagnosa && (
           <div className="max-w-4xl mx-auto space-y-4 animate-diagnosa"> {/* Batasi lebar hasil */}
             
             {/* Card Hasil Penyakit */}
@@ -173,6 +185,87 @@ const App = () => {
               </p>
             </div>
 
+            {/* Card Perhitungan Certainty Factor */}
+            <div className="bg-white rounded-[2rem] p-8 shadow-lg border border-pink-100 overflow-hidden">
+              <button 
+                onClick={() => setShowCalculation(!showCalculation)}
+                className="w-full flex items-center justify-between text-left focus:outline-none"
+              >
+                <div className="flex items-center gap-3">
+                  <span className="text-xl">📊</span>
+                  <div>
+                    <h3 className="text-lg font-black text-gray-800">Detail Perhitungan Certainty Factor</h3>
+                    <p className="text-xs text-gray-400 font-semibold">Lihat bagaimana sistem pakar menghitung nilai keyakinan secara matematis</p>
+                  </div>
+                </div>
+                <span className={`text-2xl text-pink-400 transition-transform duration-300 transform ${showCalculation ? 'rotate-185' : ''}`}>
+                  ▼
+                </span>
+              </button>
+
+              {showCalculation && (
+                <div className="mt-8 border-t border-pink-100 pt-6 space-y-6 animate-fadeIn">
+                  <div className="bg-pink-50/50 rounded-2xl p-5 border border-pink-100 text-xs text-pink-700 leading-relaxed font-semibold">
+                    <p className="mb-2 font-black text-sm">💡 Rumus Certainty Factor yang Digunakan:</p>
+                    <ul className="list-disc pl-4 space-y-1">
+                      <li><strong>CF_rule</strong> = CF_gejala * CF_pakar (nilai kepercayaan aturan)</li>
+                      <li><strong>CF_combine</strong> (untuk aturan ganda) = CF_lama + CF_baru * (1 - CF_lama)</li>
+                    </ul>
+                  </div>
+
+                  <div className="space-y-6">
+                    {hasil.calculation_steps && hasil.calculation_steps.map((item, idx) => (
+                      <div key={idx} className="bg-gray-50 rounded-2xl p-6 border border-gray-100 space-y-4">
+                        <div className="flex justify-between items-center border-b border-gray-200/60 pb-3">
+                          <h4 className="font-black text-gray-800 uppercase text-sm tracking-wide">
+                            {item.penyakit}
+                          </h4>
+                          <span className="bg-pink-100 text-pink-600 text-xs font-black px-3 py-1 rounded-full">
+                            CF Akhir: {(item.cf * 100).toFixed(2)}%
+                          </span>
+                        </div>
+
+                        {/* Rules Evaluated */}
+                        <div className="space-y-3">
+                          <p className="text-xs font-black text-gray-400 uppercase tracking-wider">Aturan yang Terpicu:</p>
+                          {item.rulesUsed.map((rule, rIdx) => (
+                            <div key={rIdx} className="bg-white rounded-xl p-4 border border-gray-100 text-xs space-y-2 shadow-sm">
+                              <div className="flex items-center justify-between text-[10px] font-black text-pink-500 uppercase tracking-widest">
+                                <span>Rule {rule.ruleKode}</span>
+                                <span>Nilai Pakar: {rule.nilaiKepercayaan}</span>
+                              </div>
+                              
+                              <div className="bg-gray-50 rounded-lg p-2 font-mono text-[10px] text-gray-600 space-y-1">
+                                <p>⚙️ {rule.calculationDetail}</p>
+                                <p>🧮 {rule.ruleCalculation}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Combine Steps */}
+                        {item.combineLogs && item.combineLogs.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-xs font-black text-gray-400 uppercase tracking-wider">Langkah Penggabungan (CF Combine):</p>
+                            <div className="bg-[#FAF9F6] rounded-xl p-4 border border-yellow-100 font-mono text-[10px] text-gray-700 space-y-2">
+                              {item.combineLogs.map((log, lIdx) => (
+                                <p key={lIdx} className="leading-relaxed">
+                                  {log.startsWith('Hasil') ? (
+                                    <strong className="text-green-700">{log}</strong>
+                                  ) : (
+                                    <span>{log}</span>
+                                  )}
+                                </p>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
