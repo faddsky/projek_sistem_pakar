@@ -65,7 +65,7 @@ const App = () => {
           <div className="md:w-1/2 bg-gradient-to-br from-[#FB6F92] to-[#FFB3C1] p-12 flex flex-col justify-center text-white relative">
             <h2 className="text-4xl font-black mb-4 leading-tight text-center md:text-left">Halo, Selamat Datang! ✨</h2>
             <p className="text-pink-50 font-medium leading-relaxed opacity-90 text-sm text-center md:text-left">
-              Sistem Pakar DigestCare membantu Anda menganalisis kemungkinan penyakit pencernaan (Gastritis, Diare, GERD, Wasir, Tipes, Apendisitis) berdasarkan Certainty Factor secara cepat, akurat, dan aesthetic.
+              Sistem Pakar DigestCare membantu Anda menganalisis kemungkinan penyakit pencernaan (Gastritis, Diare, GERD, Wasir, Tipes, Apendisitis) berdasarkan Certainty Factor secara cepat, akurat.
             </p>
           </div>
           <div className="md:w-1/2 p-12 flex flex-col justify-center text-center md:text-left">
